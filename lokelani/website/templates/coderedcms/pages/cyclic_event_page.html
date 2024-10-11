@@ -1,0 +1,28 @@
+{% extends "coderedcms/pages/web_page.html" %}
+{% load wagtailadmin_tags wagtailcore_tags wagtailimages_tags coderedcms_tags %}
+
+{% block content_pre_body %}
+    {{ block.super }}
+    {% with self.most_recent_occurrence as nextup %}
+    <div class="container my-5">
+        <p class="d-md-inline-block me-4"><b>When:</b> {{ nextup.0 }}</p>
+        {% if self.address %}
+        <p class="d-md-inline-block me-4"><b>Where:</b> {{ self.address }}</p>
+        {% endif %}
+        <div class="float-lg-end">
+            {% include "coderedcms/includes/ical/single_ical_button.html" with event=self start=nextup.0 end=nextup.1 %}
+        </div>
+        <hr>
+    </div>
+    {% endwith %}
+{% endblock %}
+
+{% block content_post_body %}
+    <div class="container">
+        <form method="POST" action="">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+{% endblock %}

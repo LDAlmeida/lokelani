@@ -135,7 +135,7 @@ AUTH_USER_MODEL = "custom_user.User"
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "America/New_York"
+TIME_ZONE = "Pacific/Honolulu"
 
 USE_I18N = False
 
