@@ -3,26 +3,29 @@
 
 {% block content_pre_body %}
     {{ block.super }}
-    {% with self.most_recent_occurrence as nextup %}
+    {% with page.cyclic_event as cyclic_event %}
     <div class="container my-5">
-        <p class="d-md-inline-block me-4"><b>When:</b> {{ nextup.0 }}</p>
-        {% if self.address %}
-        <p class="d-md-inline-block me-4"><b>Where:</b> {{ self.address }}</p>
+        <p class="d-md-inline-block me-4"><b>Frequency:</b> {{ cyclic_event.frequency }}</p>
+        <p class="d-md-inline-block me-4"><b>Beds:</b> {{ cyclic_event.beds.all|join:", "  }}</p>
+        <p class="d-md-inline-block me-4"><b>Start date:</b> {{ cyclic_event.start_date }}</p>
+        {%if cyclic_event.moon_phase %}
+        <p class="d-md-inline-block me-4"><b>Moon phase:</b> {{ cyclic_event.moon_phase }}</p>
         {% endif %}
-        <div class="float-lg-end">
-            {% include "coderedcms/includes/ical/single_ical_button.html" with event=self start=nextup.0 end=nextup.1 %}
-        </div>
         <hr>
     </div>
     {% endwith %}
 {% endblock %}
-
 {% block content_post_body %}
     <div class="container">
-        <form method="POST" action="">
-            {% csrf_token %}
-            {{ form.as_p }}
+        
+<p class="d-md-inline-block me-4"><b>This event date:</b> {{ page.most_recent_occurrence.0 }}</p>
+        <div class="row">
+            <form method="POST" action="">
+                {% csrf_token %}
+                {{ form.as_p }}
+            </form>
+            
             <button type="submit" class="btn btn-primary">Save</button>
-        </form>
+        </div>
     </div>
 {% endblock %}

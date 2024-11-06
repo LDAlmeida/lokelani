@@ -1,5 +1,7 @@
 from django.contrib import admin
-from website.models import MoonPhase, MoonPhaseEvent, CyclicEventPage, CyclicEvent, PlantBeds
+from website.models import MoonPhase, MoonPhaseEvent, CyclicEventPage, CyclicEvent, PlantBeds, Plantation, Seed, Note
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponseRedirect
 
 @admin.register(MoonPhase)
 class Admin(admin.ModelAdmin):
@@ -25,8 +27,37 @@ class CyclicEventAdmin(admin.ModelAdmin):
     
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
-        obj.create_cyclic_events()
+        obj.create_or_update_cyclic_events()
         
+    def delete_model(self, request, obj):
+        # Delete all associated CyclicEventPages before deleting the CyclicEvent
+        try:
+            # Get all pages associated with this CyclicEvent
+            cyclic_event_pages = CyclicEventPage.objects.filter(cyclic_event=obj)
+            for page in cyclic_event_pages:
+                page.delete()  # This will call the delete method for the page, including any related objects
+        except ObjectDoesNotExist:
+            # Handle the case where no pages are found, if needed
+            pass
+        
+        # Now call the super method to delete the CyclicEvent itself
+        super().delete_model(request, obj)
+@admin.register(Seed)
+class SeedAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(Note)
+class NoteAdmin(admin.ModelAdmin):
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        return HttpResponseRedirect('/plant-calendar')
+
+    def response_change(self, request, obj):
+        return HttpResponseRedirect('/plant-calendar')
+   
+class PlantationInline(admin.TabularInline):
+    model = Plantation
+    extra = 1        
 @admin.register(PlantBeds)
 class PlantBedsAdmin(admin.ModelAdmin):
-    pass
+    inlines = [PlantationInline]

@@ -1,6 +1,6 @@
 {% load wagtailcore_tags wagtailsettings_tags wagtailimages_tags coderedcms_tags i18n website_tags %}
 {% wagtail_site as site %}
-<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
+<nav class="navbar navbar-expand-lg">
   <div class="container">
 
     {# Allow the Logo to be user-customizable via the CRX Settings in the Wagtail Admin. #}
@@ -35,7 +35,10 @@
 
       <div class="navbar-nav ms-auto">
         <div class="nav-item">
-          <a href="/django-admin/" class="nav-link">Admin</a>
+          <a href="/admin/" class="nav-link">Admin Wagtail</a>
+        </div>
+        <div class="nav-item">
+          <a href="/django-admin/" class="nav-link">Admin Django</a>
         </div>
         <div class="nav-item">
           <a href="{% url 'crx_search' %}" class="nav-link">Search</a>

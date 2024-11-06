@@ -1,0 +1,54 @@
+{% extends "coderedcms/pages/web_page.html" %}
+{% load wagtailadmin_tags wagtailcore_tags wagtailimages_tags coderedcms_tags %}
+
+{% block content %}
+<div class="container-fluid d-flex align-items-top justify-content-center" style="min-height: calc(100vh - 56px);"> <!-- Removed top padding -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-4">
+
+        {% for bed in plant_beds %}
+        <div class="col">
+            <a href="{{ bed.id }}" class="text-decoration-none">
+                <div class="card border-0 shadow-sm h-100 d-flex flex-column">
+                    <div class="card-body text-center flex-grow-1">
+                        <h5 class="card-title fw-bold text-primary">{{ bed.name }}</h5>
+                        <p class="card-text">
+                            {% if bed.plantations.all %}
+                                {% for plantation in bed.plantations.all %}
+                                    <span class="badge bg-success m-1">{{ plantation }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">No plants yet</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% empty %}
+        <p class="text-center">No plant beds available.</p>
+        {% endfor %}
+
+    </div>
+</div>
+
+<style>
+    /* Card hover effect */
+    .card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    /* Transition effect */
+    .card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    /* Badge styling */
+    .badge {
+        font-size: 0.85rem;
+    }
+    /* Text and container spacing */
+    .card-body {
+        padding: 1.5rem;
+    }
+</style>
+
+{% endblock %}

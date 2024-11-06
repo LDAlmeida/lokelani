@@ -7,8 +7,8 @@ from django.urls import include
 from django.urls import path
 from wagtail.documents import urls as wagtaildocs_urls
 
-
 urlpatterns = [
+
     # Admin
     path("django-admin/", admin.site.urls),
     path("admin/", include(crx_admin_urls)),
@@ -19,6 +19,8 @@ urlpatterns = [
     # For anything not caught by a more specific rule above, hand over to
     # the page serving mechanism. This should be the last pattern in
     # the list:
+        
+    path("", include("website.urls")),
     path("", include(crx_urls)),
     # Alternatively, if you want pages to be served from a subpath
     # of your site, rather than the site root:

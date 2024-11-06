@@ -15,13 +15,15 @@ from coderedcms.models import CoderedFormPage
 from coderedcms.models import CoderedLocationIndexPage
 from coderedcms.models import CoderedLocationPage
 from coderedcms.models import CoderedWebPage
+from coderedcms.models import CoderedPage
 from django.db import models
 from django.utils import timezone
 from django.shortcuts import render, redirect
 from modelcluster.fields import ParentalKey
 from wagtail import blocks
 from wagtail.admin.panels import FieldPanel
-from wagtail.fields import StreamField
+from wagtail.blocks import StreamBlock, RichTextBlock
+from wagtail.fields import StreamField, RichTextField
 from wagtail.snippets.models import register_snippet
 from datetime import datetime, timedelta
 import csv
@@ -61,6 +63,14 @@ class ArticleIndexPage(CoderedArticleIndexPage):
 
 
 class EventPage(CoderedEventPage):
+    body = StreamField(
+        StreamBlock([
+            ("rich_text", RichTextBlock()),
+        ]),
+        null=True,
+        blank=True,
+    )
+    
     class Meta:
         verbose_name = "Event Page"
 
@@ -302,10 +312,23 @@ class MoonPhaseLoader:
                 defaults={'moon_phase': moon_phase}
             )
 
+class Seed(models.Model):
+    name = models.CharField(max_length=255, help_text="Nome da semente, ex: Rosa, Gardênia")
+    
+    def __str__(self):
+        return self.name
+
+class Plantation(models.Model):
+    seed = models.ForeignKey(Seed, on_delete=models.CASCADE, related_name='plantations')
+    plant_bed = models.ForeignKey('PlantBeds', on_delete=models.CASCADE, related_name='plantations')
+    quantity = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.seed.name} x{self.quantity}"
+
 class PlantBeds(models.Model):
     name = models.CharField(max_length=255,blank=True, null=True, help_text="Número dos canteiros, ex: 1,2 ou 1-3")
     bed_number = models.IntegerField()
-    current_planted_seed = models.CharField(max_length=255, blank=True, null=True)
     
     def __str__(self):
         return self.name    
@@ -325,13 +348,13 @@ class CyclicEvent(models.Model):
     ]
 
     name = models.CharField(max_length=255)
-    beds = models.ManyToManyField(PlantBeds,blank=True, help_text="Número dos canteiros, ex: 1,2 ou 1-3")
+    beds = models.ManyToManyField(PlantBeds, blank=True, help_text="Número dos canteiros, ex: 1,2 ou 1-3")
     frequency = models.CharField(max_length=50, choices=EVENT_FREQUENCY_CHOICES)
     moon_phase = models.ForeignKey(MoonPhase, null=True, blank=True, on_delete=models.SET_NULL)
     start_date = models.DateField()
-    calendar_color = models.CharField(max_length=7, null=True, blank= True, default="#123456")
+    calendar_color = models.CharField(max_length=7, null=True, blank=True, default="#123456")
 
-    def create_cyclic_events(self):
+    def create_or_update_cyclic_events(self):
         eventos_pagina = EventIndexPage.objects.get(title="Plant Calendar")
         current_date = self.start_date
 
@@ -343,22 +366,54 @@ class CyclicEvent(models.Model):
             '4months': 16,
         }.get(self.frequency, 1))
 
+        if self.moon_phase:
+            # Find the next occurrence of the specified lunar phase
+            current_date = self.get_next_moon_phase_date(current_date)
+
         while current_date < datetime.now().date() + timedelta(weeks=16):
-            event_exists = CyclicEventPage.objects.filter(title=self.name, occurrences__start=current_date).exists()
+            # Check for an existing event with the same title and date
+            existing_event = CyclicEventPage.objects.filter(
+                title=self.name,
+                occurrences__start=current_date
+            ).first()
 
-            if not event_exists:
-                evento = CyclicEventPage(
-                    title=self.name,
-                    calendar_color=self.calendar_color,
-                    cyclic_event= self,
-                    first_published_at=timezone.now(),
-                    last_published_at=timezone.now(),
-                )
-                eventos_pagina.add_child(instance=evento)
-                evento.occurrences.create(start=current_date, end=current_date)
-                evento.save_revision().publish()
+            # If an existing event is found, delete it to prevent duplication
+            if existing_event:
+                existing_event.delete()
 
-            current_date += delta
+            # Create or update the event with the latest details
+            evento = CyclicEventPage(
+                title=self.name,
+                calendar_color=self.calendar_color,
+                cyclic_event=self,
+                first_published_at=timezone.now(),
+                last_published_at=timezone.now(),
+            )
+            eventos_pagina.add_child(instance=evento)
+            evento.occurrences.create(start=current_date, end=current_date)
+            evento.save_revision().publish()
+
+            # Adjust current_date based on moon phase or frequency
+            if self.moon_phase:
+                current_date = self.get_next_moon_phase_date(current_date)
+            else:
+                current_date += delta
+
+
+
+    def get_next_moon_phase_date(self, start_date):
+        """Retrieve the next occurrence of the selected lunar phase after the given date."""
+        next_occurrence = start_date
+        # Assuming MoonPhase has a related MoonPhaseEvent model with a datetime field
+        while True:
+            next_occurrence += timedelta(days=1)  # Check the next day
+            # Get the next moon phase event after the current date
+            moon_phase_event = MoonPhaseEvent.objects.filter(
+                moon_phase=self.moon_phase,
+                datetime__gt=next_occurrence
+            ).order_by('datetime').first()
+            if moon_phase_event:
+                return moon_phase_event.datetime.date()
 
     def __str__(self):
         return str(self.name)
@@ -399,12 +454,18 @@ class Note(models.Model):
 
     def create_event(self):
         eventos_pagina = EventIndexPage.objects.get(title="Plant Calendar")
+        
+        # Conteúdo do evento usando RichTextBlock
+        body_content = [{"type": "rich_text", "value": self.note}]
+        
         evento = EventPage(
             title=f"Note - {self.date}",
+            body=blocks.StreamValue(EventPage.body.field.stream_block, body_content, is_lazy=True),
             calendar_color="#eed709",
             first_published_at=timezone.now(),
             last_published_at=timezone.now(),
         )
+        
         eventos_pagina.add_child(instance=evento)
         evento.occurrences.create(start=self.date, end=self.date)
         evento.save_revision().publish()
@@ -412,3 +473,14 @@ class Note(models.Model):
     def __str__(self):
         return f'Note - {self.date}'
     
+class PlantBedListPage(CoderedPage):
+    intro = RichTextField(blank=True)
+    template = "website/plant_bed_list_page.html"
+    content_panels = CoderedPage.content_panels + [
+        FieldPanel('intro'),
+    ]
+
+    def get_context(self, request):
+        context = super().get_context(request)
+        context['plant_beds'] = PlantBeds.objects.all()
+        return context

@@ -1,0 +1,57 @@
+{% extends "coderedcms/pages/web_page.html" %}
+{% load coderedcms_tags static wagtailcore_tags wagtailimages_tags %}
+{% block content %}
+{% if self.default_calendar_view %}
+<div class="container mt-4"> <!-- Added mt-4 class for top margin -->
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-8"> <!-- Changed to col-lg-8 for a narrower width -->
+      <div class="calendar-container" style="max-width: 100%; overflow-x: auto;"> <!-- Added inline styles for further control -->
+        {% include "coderedcms/includes/ical/calendar.html" %} <!-- Importing the calendar template -->
+      </div>
+    </div>
+  </div>
+  <div class="row justify-content-center"> <!-- Centering the button -->
+    <div class="col-auto"> <!-- Using col-auto for proper button width -->
+      <a href="/django-admin/website/note/add/" class="btn btn-primary">Add a note</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block index_content %}
+<div class="container">
+  {% for event in index_paginated %}
+  <div class="row mb-4">
+    {% block event_cover_image %}
+    {% if event.cover_image %}
+    <div class="col-md">
+      {% image event.cover_image fill-1600x900 format-webp preserve-svg as cover_image %}
+      <a href="{{ event.url }}" title="{{ event.title }}">
+        <img src="{{ cover_image.url }}" class="w-100" alt="{{ event.title }}">
+      </a>
+    </div>
+    {% endif %}
+    {% endblock %}
+    {% block event_body_preview %}
+    <div class="col-md d-flex flex-column justify-content-center">
+      <h3><a href="{{ event.url }}">{{ event.title }}</a></h3>
+      <p>{{ event.most_recent_occurrence.0 }}</p>
+      <p>{{ event.body_preview }}</p>
+    </div>
+    {% endblock %}
+  </div>
+  {% if not forloop.last %}
+  <hr>
+  {% endif %}
+  {% endfor %}
+  {% include "coderedcms/includes/pagination.html" with items=index_paginated %}
+</div>
+{% endblock %}
+
+{% block coderedcms_scripts %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js" integrity="sha256-alsi6DkexWIdeVDEct5s7cnqsWgOqsh2ihuIZbU6H3I=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/bootstrap5@6.1.9/index.global.min.js" integrity="sha256-gUOOsuvXIJriWP5FGvNLUHPduBqgnIyGuAxWiWtHxMo=" crossorigin="anonymous"></script>
+<script src="{% static 'coderedcms/js/crx-events.js' %}?v={% coderedcms_version %}"></script>
+{% endblock %}
