@@ -1,5 +1,5 @@
 from django.contrib import admin
-from website.models import MoonPhase, MoonPhaseEvent, CyclicEventPage, CyclicEvent, PlantBeds, Plantation, Seed, Note
+from website.models import MoonPhase, MoonPhaseEvent, CyclicEventPage, CyclicEvent, PlantBeds, Plantation, Plant, Note
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseRedirect
 
@@ -42,12 +42,14 @@ class CyclicEventAdmin(admin.ModelAdmin):
         
         # Now call the super method to delete the CyclicEvent itself
         super().delete_model(request, obj)
-@admin.register(Seed)
-class SeedAdmin(admin.ModelAdmin):
+@admin.register(Plant)
+class PlantAdmin(admin.ModelAdmin):
     pass
 
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):
+    list_filter = ['date', 'bed']
+    list_display = ['note', 'date', 'bed']
     
     def response_add(self, request, obj, post_url_continue=None):
         return HttpResponseRedirect('/plant-calendar')

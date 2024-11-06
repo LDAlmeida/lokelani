@@ -312,26 +312,26 @@ class MoonPhaseLoader:
                 defaults={'moon_phase': moon_phase}
             )
 
-class Seed(models.Model):
-    name = models.CharField(max_length=255, help_text="Nome da semente, ex: Rosa, Gardênia")
+class Plant(models.Model):
+    name = models.CharField(max_length=255, help_text="Plant name, i.e: Rose, Gardenia")
     
     def __str__(self):
         return self.name
 
 class Plantation(models.Model):
-    seed = models.ForeignKey(Seed, on_delete=models.CASCADE, related_name='plantations')
+    plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name='plantations')
     plant_bed = models.ForeignKey('PlantBeds', on_delete=models.CASCADE, related_name='plantations')
     quantity = models.PositiveIntegerField()
 
     def __str__(self):
-        return f"{self.seed.name} x{self.quantity}"
+        return f"{self.plant.name} x{self.quantity}"
 
 class PlantBeds(models.Model):
-    name = models.CharField(max_length=255,blank=True, null=True, help_text="Número dos canteiros, ex: 1,2 ou 1-3")
+    name = models.CharField(max_length=255,blank=True, null=True, help_text="Bed number, i.e: 1,2 ou 1-3")
     bed_number = models.IntegerField()
     
     def __str__(self):
-        return self.name    
+        return str(self.name)    
     
     def save(self, *args, **kwargs):
         if not self.name:
@@ -340,15 +340,15 @@ class PlantBeds(models.Model):
 
 class CyclicEvent(models.Model):
     EVENT_FREQUENCY_CHOICES = [
-        ('weekly', 'Semanal'),
-        ('biweekly', 'A cada duas semanas'),
-        ('monthly', 'Mensal'),
-        ('2.5months', 'A cada 2.5 meses'),
-        ('4months', 'A cada 4 meses'),
+        ('weekly', 'Weekly'),
+        ('biweekly', 'Every two weeks'),
+        ('monthly', 'Monthly'),
+        ('2.5months', 'Every 2 and a half months'),
+        ('4months', 'Every 4 months'),
     ]
 
     name = models.CharField(max_length=255)
-    beds = models.ManyToManyField(PlantBeds, blank=True, help_text="Número dos canteiros, ex: 1,2 ou 1-3")
+    beds = models.ManyToManyField(PlantBeds, blank=True, help_text="Bed number, i.e: 1,2 ou 1-3")
     frequency = models.CharField(max_length=50, choices=EVENT_FREQUENCY_CHOICES)
     moon_phase = models.ForeignKey(MoonPhase, null=True, blank=True, on_delete=models.SET_NULL)
     start_date = models.DateField()
@@ -447,7 +447,8 @@ class CyclicEventPage(EventPage):
 class Note(models.Model):
     note = models.TextField(max_length=1000)
     date = models.DateField(default=timezone.now, blank=False, null=False)
-
+    bed = models.ForeignKey(PlantBeds, blank=True, null=True, on_delete=models.SET_NULL)
+    
     def save(self, *args, **kwargs):
         self.create_event()
         return super(Note, self).save(*args, **kwargs)
@@ -459,7 +460,7 @@ class Note(models.Model):
         body_content = [{"type": "rich_text", "value": self.note}]
         
         evento = EventPage(
-            title=f"Note - {self.date}",
+            title=f"Note - {self.note[:15]}...",
             body=blocks.StreamValue(EventPage.body.field.stream_block, body_content, is_lazy=True),
             calendar_color="#eed709",
             first_published_at=timezone.now(),
